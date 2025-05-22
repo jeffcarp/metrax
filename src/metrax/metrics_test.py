@@ -21,26 +21,8 @@ import metrax
 import numpy as np
 from sklearn import metrics as sklearn_metrics
 
-np.random.seed(42)
-BATCHES = 4
-BATCH_SIZE = 8
-OUTPUT_LABELS = np.random.randint(
-    0,
-    2,
-    size=(BATCHES, BATCH_SIZE),
-).astype(np.float32)
-OUTPUT_PREDS = np.random.uniform(size=(BATCHES, BATCH_SIZE)).astype(np.float32)
-OUTPUT_LABELS_BS1 = np.random.randint(
-    0,
-    2,
-    size=(BATCHES, 1),
-).astype(np.float32)
-OUTPUT_PREDS_BS1 = np.random.uniform(size=(BATCHES, 1)).astype(np.float32)
-SAMPLE_WEIGHTS = np.tile(
-    [0.5, 1, 0, 0, 0, 0, 0, 0],
-    (BATCHES, 1),
-).astype(np.float32)
-
+# TODO(b/265342605): Migrate to test fixtures.
+from metrax import test_utils
 
 class MetricsTest(parameterized.TestCase):
 
@@ -48,51 +30,13 @@ class MetricsTest(parameterized.TestCase):
     super().setUp()
 
     # TODO(jeffcarp): Merge these into generated fixtures.
-    self.model_outputs = (
-        dict(
-            logits=jnp.array(
-                [0.34, 0.89, 0.12, 0.67, 0.98, 0.23, 0.56, 0.71, 0.45, 0.08]
-            ),
-            labels=jnp.array([1, 0, 1, 1, 0, 0, 1, 0, 1, 1]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.23, 0.89, 0.57, 0.11, 0.99, 0.38, 0.76, 0.05, 0.62, 0.44]
-            ),
-            labels=jnp.array([0, 0, 1, 0, 1, 1, 0, 1, 0, 0]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.67, 0.21, 0.95, 0.03, 0.88, 0.51, 0.34, 0.79, 0.15, 0.42]
-            ),
-            labels=jnp.array([1, 1, 0, 1, 0, 1, 1, 0, 0, 1]),
-        ),
-        dict(
-            logits=jnp.array(
-                [0.91, 0.37, 0.18, 0.75, 0.59, 0.02, 0.83, 0.26, 0.64, 0.48]
-            ),
-            labels=jnp.array([0, 1, 1, 0, 0, 1, 0, 1, 1, 0]),
-        ),
+    self.model_outputs = test_utils.generate_model_outputs(
+        num_batches=4, num_features_per_batch=10, random_seed=42
     )
-    self.model_outputs_batch_size_one = (
-        dict(
-            logits=jnp.array([[0.32]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.74]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.86]]),
-            labels=jnp.array([1]),
-        ),
-        dict(
-            logits=jnp.array([[0.21]]),
-            labels=jnp.array([1]),
-        ),
+    self.model_outputs_batch_size_one = test_utils.generate_model_outputs(
+        num_batches=4, num_features_per_batch=1, random_seed=43
     )
-    self.sample_weights = jnp.array([0.5, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+    self.sample_weights = test_utils.DEFAULT_SAMPLE_WEIGHTS_10
 
   def compute_aucpr(self, model_outputs, sample_weights=None):
     metric = None
@@ -117,10 +61,10 @@ class MetricsTest(parameterized.TestCase):
     return metric.compute()
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, 0.5),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.7),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.1),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
+      ('basic', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.5),
+      ('high_threshold', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.7),
+      ('low_threshold', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.1),
+      ('batch_size_one', test_utils.OUTPUT_LABELS_BS1, test_utils.OUTPUT_PREDS_BS1, 0.5),
   )
   def test_precision(self, y_true, y_pred, threshold):
     """Test that Precision metric computes correct values."""
@@ -143,10 +87,10 @@ class MetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, 0.5),
-      ('high_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.7),
-      ('low_threshold', OUTPUT_LABELS, OUTPUT_PREDS, 0.1),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, 0.5),
+      ('basic', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.5),
+      ('high_threshold', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.7),
+      ('low_threshold', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, 0.1),
+      ('batch_size_one', test_utils.OUTPUT_LABELS_BS1, test_utils.OUTPUT_PREDS_BS1, 0.5),
   )
   def test_recall(self, y_true, y_pred, threshold):
     """Test that Recall metric computes correct values."""
@@ -229,9 +173,9 @@ class MetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('basic', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, None),
+      ('batch_size_one', test_utils.OUTPUT_LABELS_BS1, test_utils.OUTPUT_PREDS_BS1, None),
+      ('weighted', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, test_utils.SAMPLE_WEIGHTS),
   )
   def test_mse(self, y_true, y_pred, sample_weights):
     if sample_weights is None:
@@ -259,9 +203,9 @@ class MetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('basic', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, None),
+      ('batch_size_one', test_utils.OUTPUT_LABELS_BS1, test_utils.OUTPUT_PREDS_BS1, None),
+      ('weighted', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, test_utils.SAMPLE_WEIGHTS),
   )
   def test_rmse(self, y_true, y_pred, sample_weights):
     if sample_weights is None:
@@ -291,9 +235,9 @@ class MetricsTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('basic', OUTPUT_LABELS, OUTPUT_PREDS, None),
-      ('batch_size_one', OUTPUT_LABELS_BS1, OUTPUT_PREDS_BS1, None),
-      ('weighted', OUTPUT_LABELS, OUTPUT_PREDS, SAMPLE_WEIGHTS),
+      ('basic', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, None),
+      ('batch_size_one', test_utils.OUTPUT_LABELS_BS1, test_utils.OUTPUT_PREDS_BS1, None),
+      ('weighted', test_utils.OUTPUT_LABELS, test_utils.OUTPUT_PREDS, test_utils.SAMPLE_WEIGHTS),
   )
   def test_rsquared(self, y_true, y_pred, sample_weights):
     if sample_weights is None:
